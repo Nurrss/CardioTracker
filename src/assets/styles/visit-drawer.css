@@ -227,6 +227,71 @@
   flex-shrink: 0;
 }
 
+.visit-interp-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  line-height: 1.4;
+}
+
+.visit-interp-line--success {
+  background-color: #d1fae5;
+  color: #047857;
+}
+
+.visit-interp-line--warning {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.visit-interp-line--destructive {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.visit-interp-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meds-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background-color: var(--muted);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.med-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.med-checkbox {
+  min-width: 150px;
+  flex-shrink: 0;
+}
+
+.med-label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.med-dose-input {
+  flex: 1;
+  min-width: 160px;
+  font-size: 13px;
+  padding: 6px 10px;
+}
+
 .visit-drawer-enter-active,
 .visit-drawer-leave-active {
   transition: opacity 0.2s ease;

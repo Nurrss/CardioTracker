@@ -19,7 +19,7 @@ const HERO_IMAGE =
         <div class="brand__logo">
           <Icon icon="lucide:activity" width="24" style="color: var(--primary)" />
         </div>
-        <span class="brand__name">CardioFlow</span>
+        <span class="brand__name">Care Jurek</span>
       </div>
 
       <div class="hero">

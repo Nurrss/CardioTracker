@@ -82,6 +82,20 @@ const emit = defineEmits(['toggle'])
         />
       </div>
 
+      <div v-if="visit.prescribedMeds && visit.prescribedMeds.length > 0" class="visit-medications">
+        <h4 class="visit-body__section-title">Назначения врача (базовые препараты)</h4>
+        <div class="meds-prescribed-grid">
+          <div
+            v-for="med in visit.prescribedMeds"
+            :key="med.label"
+            class="med-prescribed-item"
+          >
+            <span class="med-prescribed-name">{{ med.label }}</span>
+            <span class="med-prescribed-dose">{{ med.dose }}</span>
+          </div>
+        </div>
+      </div>
+
       <div v-if="visit.conclusion" class="visit-conclusion">
         <h4 class="visit-conclusion__title">Заключение врача</h4>
         <p class="visit-conclusion__text">{{ visit.conclusion }}</p>

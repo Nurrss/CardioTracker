@@ -4,11 +4,13 @@ import { Icon } from '@iconify/vue'
 import {
   calculateBmi,
   formatShortName,
+  getAltAstInterpretation,
   getAltAstRatio,
   getBnpStatus,
   getCreatinineStatus,
   getEfRisk,
   getHbStatus,
+  getUreaStatus,
   getWalkTestClass,
 } from '../../utils/visitCalculations.js'
 
@@ -36,6 +38,21 @@ const ecgOptions = [
   'ST депрессия, признаки ишемии.',
 ]
 
+const medicationList = [
+  { key: 'arni', label: 'ARNI', hint: '24/26 → 97/103 мг ×2' },
+  { key: 'acei', label: 'ИАПФ (ACEI)', hint: 'Эналаприл 2.5 → 10–20 мг ×2' },
+  { key: 'bb', label: 'Б-блокатор (BB)', hint: 'Бисопролол 1.25 → 10 мг' },
+  { key: 'mra', label: 'АМК (MRA)', hint: 'Спиронолактон 25 → 50 мг' },
+  { key: 'sglt2i', label: 'SGLT2i', hint: 'Дапаглифлозин 10 мг' },
+  { key: 'diuretic', label: 'Диуретик', hint: 'Торасемид 5–40 мг' },
+  { key: 'oac', label: 'Антикоагулянт (ОАК)', hint: 'Апиксабан 5 мг ×2' },
+  { key: 'antiplatelet', label: 'Антиагрегант', hint: 'Аспирин 75–100 мг' },
+]
+
+function initialMedications() {
+  return Object.fromEntries(medicationList.map((m) => [m.key, { prescribed: false, dose: '' }]))
+}
+
 const form = reactive({
   ef: '',
   walkTest: '',
@@ -57,6 +74,7 @@ const form = reactive({
   ast: '',
   nextVisitDate: '',
   conclusion: '',
+  medications: initialMedications(),
 })
 
 const touched = ref(false)
@@ -75,10 +93,12 @@ const walkClass = computed(() => getWalkTestClass(form.walkTest))
 const bnpStatus = computed(() => getBnpStatus(form.bnp))
 const bmiResult = computed(() => calculateBmi(form.height, form.weight))
 const hbStatus = computed(() => getHbStatus(form.hb))
+const ureaStatus = computed(() => getUreaStatus(form.urea))
 const creatinineStatus = computed(() =>
   getCreatinineStatus(form.creatinine, previousCreatinine.value),
 )
 const altAstRatio = computed(() => getAltAstRatio(form.alt, form.ast))
+const altAstInterpretation = computed(() => getAltAstInterpretation(form.alt, form.ast))
 
 const efError = computed(() => {
   if (!touched.value && !form.ef) return ''
@@ -136,6 +156,7 @@ watch(
       ast: '',
       nextVisitDate: '',
       conclusion: '',
+      medications: initialMedications(),
     })
     touched.value = false
   },
@@ -144,7 +165,7 @@ watch(
 function onSave() {
   touched.value = true
   if (hasErrors.value) return
-  emit('save', { ...form, ecgTags: { ...form.ecgTags } })
+  emit('save', { ...form, ecgTags: { ...form.ecgTags }, medications: JSON.parse(JSON.stringify(form.medications)) })
 }
 </script>
 
@@ -172,6 +193,7 @@ function onSave() {
           </div>
 
           <div class="visit-drawer-body">
+            <!-- 1. ФВ/ЛЖ -->
             <div class="visit-form-group">
               <label class="visit-form-label">
                 1. ФВ/ЛЖ (ЭхоКГ), % <span class="required">*</span>
@@ -193,6 +215,7 @@ function onSave() {
               <span v-if="efError" class="visit-form-error">{{ efError }}</span>
             </div>
 
+            <!-- 2. Тест 6 минут -->
             <div class="visit-form-group">
               <label class="visit-form-label">
                 2. Тест 6 минут ходьбы (метры)
@@ -211,6 +234,7 @@ function onSave() {
               </div>
             </div>
 
+            <!-- 3. NT-proBNP -->
             <div class="visit-form-group">
               <label class="visit-form-label">
                 3. Уровень NT-proBNP (пг/мл) <span class="required">*</span>
@@ -225,6 +249,14 @@ function onSave() {
               />
               <span v-if="bnpError" class="visit-form-error">{{ bnpError }}</span>
               <div
+                v-if="bnpStatus && !bnpError"
+                class="visit-interp-line"
+                :class="`visit-interp-line--${bnpStatus.variant}`"
+              >
+                <Icon :icon="bnpStatus.icon" width="13" />
+                <span><strong>{{ bnpStatus.label }}:</strong> {{ bnpStatus.interpretation }}</span>
+              </div>
+              <div
                 v-if="bnpStatus?.alert"
                 class="visit-inline-alert visit-inline-alert--destructive"
               >
@@ -236,6 +268,7 @@ function onSave() {
               </div>
             </div>
 
+            <!-- 4. ЭКГ -->
             <div class="visit-form-group">
               <label class="visit-form-label">4. ЭКГ (Заключение)</label>
               <select v-model="form.ecgConclusion" class="visit-form-control visit-form-select">
@@ -275,6 +308,7 @@ function onSave() {
               </div>
             </div>
 
+            <!-- 5. Рост / Вес -->
             <div class="visit-form-row">
               <div class="visit-form-group">
                 <label class="visit-form-label">5. Рост (см)</label>
@@ -303,6 +337,7 @@ function onSave() {
               ИМТ: <strong>{{ bmiResult.value }}</strong> ({{ bmiResult.category }})
             </div>
 
+            <!-- 6. Hb / Hct -->
             <div class="visit-form-row">
               <div class="visit-form-group">
                 <label class="visit-form-label">6. Гемоглобин (Hb)</label>
@@ -331,20 +366,33 @@ function onSave() {
               </div>
             </div>
 
+            <!-- 7. Мочевина / Креатинин -->
             <div class="visit-form-row">
               <div class="visit-form-group">
-                <label class="visit-form-label">7. Мочевина</label>
+                <label class="visit-form-label">7. Мочевина (ммоль/л)</label>
                 <input
                   v-model="form.urea"
                   type="number"
                   step="0.1"
                   min="0"
                   class="visit-form-control"
+                  :class="{ 'has-error': ureaStatus?.hasError }"
                   placeholder="7.2"
                 />
+                <div
+                  v-if="ureaStatus"
+                  class="visit-interp-line"
+                  :class="`visit-interp-line--${ureaStatus.variant}`"
+                >
+                  <Icon
+                    :icon="ureaStatus.hasError ? 'lucide:alert-triangle' : 'lucide:check-circle-2'"
+                    width="12"
+                  />
+                  {{ ureaStatus.interpretation }}
+                </div>
               </div>
               <div class="visit-form-group">
-                <label class="visit-form-label">Креатинин</label>
+                <label class="visit-form-label">Креатинин (мкмоль/л)</label>
                 <input
                   v-model="form.creatinine"
                   type="number"
@@ -353,16 +401,24 @@ function onSave() {
                   :class="{ 'has-error': creatinineStatus?.hasError }"
                   placeholder="145"
                 />
-                <span v-if="creatinineStatus?.error" class="visit-form-error">
-                  <Icon icon="lucide:arrow-up" width="12" />
-                  {{ creatinineStatus.error }}
-                </span>
+                <div
+                  v-if="creatinineStatus"
+                  class="visit-interp-line"
+                  :class="`visit-interp-line--${creatinineStatus.variant}`"
+                >
+                  <Icon
+                    :icon="creatinineStatus.hasError ? 'lucide:alert-triangle' : 'lucide:check-circle-2'"
+                    width="12"
+                  />
+                  {{ creatinineStatus.interpretation }}
+                </div>
               </div>
             </div>
 
+            <!-- 8. АЛТ / АСТ -->
             <div class="visit-form-row">
               <div class="visit-form-group">
-                <label class="visit-form-label">8. АЛТ</label>
+                <label class="visit-form-label">8. АЛТ (Ед/л)</label>
                 <input
                   v-model="form.alt"
                   type="number"
@@ -372,7 +428,7 @@ function onSave() {
                 />
               </div>
               <div class="visit-form-group">
-                <label class="visit-form-label">АСТ</label>
+                <label class="visit-form-label">АСТ (Ед/л)</label>
                 <input
                   v-model="form.ast"
                   type="number"
@@ -385,7 +441,49 @@ function onSave() {
             <div v-if="altAstRatio" class="visit-calc-result">
               AST/ALT ratio: <strong>{{ altAstRatio.value }}</strong> ({{ altAstRatio.status }})
             </div>
+            <div v-if="altAstInterpretation" class="visit-interp-block">
+              <div
+                v-for="(line, i) in altAstInterpretation"
+                :key="i"
+                class="visit-interp-line"
+                :class="`visit-interp-line--${line.variant}`"
+              >
+                <Icon
+                  :icon="line.variant === 'destructive' ? 'lucide:alert-circle' : 'lucide:alert-triangle'"
+                  width="12"
+                />
+                {{ line.text }}
+              </div>
+            </div>
 
+            <!-- 9. Назначения врача (базовые препараты) -->
+            <div class="visit-form-group">
+              <label class="visit-form-label">9. Назначения врача (базовые препараты)</label>
+              <div class="meds-list">
+                <div
+                  v-for="med in medicationList"
+                  :key="med.key"
+                  class="med-row"
+                >
+                  <label class="visit-checkbox-item med-checkbox">
+                    <input v-model="form.medications[med.key].prescribed" type="checkbox" />
+                    <span class="visit-custom-checkbox">
+                      <Icon v-if="form.medications[med.key].prescribed" icon="lucide:check" width="12" />
+                    </span>
+                    <span class="med-label">{{ med.label }}</span>
+                  </label>
+                  <input
+                    v-if="form.medications[med.key].prescribed"
+                    v-model="form.medications[med.key].dose"
+                    type="text"
+                    class="visit-form-control med-dose-input"
+                    :placeholder="med.hint"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Дата следующего визита -->
             <div class="visit-form-group" style="margin-top: 8px">
               <label class="visit-form-label">
                 Дата следующего визита <span class="required">*</span>

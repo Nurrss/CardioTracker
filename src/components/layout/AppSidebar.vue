@@ -30,7 +30,7 @@ function onLogout() {
       <div class="sidebar-header__logo">
         <Icon icon="lucide:activity" width="18" />
       </div>
-      <span class="logo-text">CardioTracker</span>
+      <span class="logo-text">Care Jurek</span>
     </div>
 
     <nav class="sidebar-nav">

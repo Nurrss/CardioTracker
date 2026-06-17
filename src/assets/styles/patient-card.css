@@ -362,6 +362,41 @@
   text-overflow: ellipsis;
 }
 
+.visit-medications {
+  margin-top: 24px;
+}
+
+.meds-prescribed-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.med-prescribed-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--primary);
+}
+
+.med-prescribed-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.med-prescribed-dose {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
 .visit-conclusion {
   margin-top: 24px;
   padding: 20px;

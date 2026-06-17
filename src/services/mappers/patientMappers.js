@@ -2,9 +2,30 @@ import {
   formatDateRuFromIso,
   getAltAstRatio,
   getBnpStatus,
+  getCreatinineStatus,
   getEfRisk,
+  getUreaStatus,
   getWalkTestClass,
 } from '../../utils/visitCalculations.js'
+
+const MED_LABELS = {
+  arni: 'ARNI',
+  acei: 'ИАПФ (ACEI)',
+  bb: 'Б-блокатор (BB)',
+  mra: 'АМК (MRA)',
+  sglt2i: 'SGLT2i',
+  diuretic: 'Диуретик',
+  oac: 'Антикоагулянт (OAC)',
+  antiplatelet: 'Антиагрегант',
+}
+
+function buildPrescribedMeds(medications) {
+  if (!medications) return null
+  const list = Object.entries(medications)
+    .filter(([, val]) => val?.prescribed)
+    .map(([key, val]) => ({ label: MED_LABELS[key] || key, dose: val.dose || '—' }))
+  return list.length > 0 ? list : null
+}
 
 function formatDateRu(dateValue) {
   if (!dateValue) return '—'
@@ -57,6 +78,8 @@ function buildIndicators(visit, previousVisit) {
   const prevCreatinine = previousVisit?.creatinine
     ? Number(previousVisit.creatinine)
     : null
+  const creatStatus = getCreatinineStatus(visit.creatinine, prevCreatinine)
+  const ureaStatus = getUreaStatus(visit.urea)
 
   const ecgFlags = visit.ecg_flags || {}
   const ecgTags = []
@@ -102,7 +125,7 @@ function buildIndicators(visit, previousVisit) {
       badgeIcon: bnpStatus?.icon || 'lucide:minus',
       previous: previousVisit?.nt_pro_bnp != null
         ? `Прошлый визит: ${previousVisit.nt_pro_bnp} пг/мл`
-        : 'Нет данных',
+        : bnpStatus?.interpretation || 'Нет данных',
       critical: bnpStatus?.variant === 'destructive',
     },
     {
@@ -147,22 +170,29 @@ function buildIndicators(visit, previousVisit) {
         : 'Нет данных',
     },
     {
+      label: 'Мочевина',
+      icon: 'lucide:beaker',
+      value: visit.urea != null ? String(visit.urea) : '—',
+      unit: visit.urea != null ? 'ммоль/л' : undefined,
+      badge: ureaStatus?.label || 'Нет данных',
+      badgeVariant: ureaStatus?.variant || 'success',
+      badgeIcon: ureaStatus?.hasError ? 'lucide:alert-triangle' : 'lucide:minus',
+      previous: previousVisit?.urea != null
+        ? `Прошлый визит: ${previousVisit.urea} ммоль/л`
+        : ureaStatus?.interpretation || 'Нет данных',
+    },
+    {
       label: 'Креатинин',
       icon: 'lucide:flask-conical',
       value: visit.creatinine != null ? String(visit.creatinine) : '—',
       unit: visit.creatinine != null ? 'мкмоль/л' : undefined,
-      badge:
-        prevCreatinine && Number(visit.creatinine) > prevCreatinine * 1.3
-          ? 'Ухудшение'
-          : 'Новые данные',
-      badgeVariant:
-        prevCreatinine && Number(visit.creatinine) > prevCreatinine * 1.3
-          ? 'warning'
-          : 'success',
-      badgeIcon: 'lucide:arrow-up-right',
+      badge: creatStatus?.label || 'Нет данных',
+      badgeVariant: creatStatus?.variant || 'success',
+      badgeIcon: creatStatus?.hasError ? 'lucide:alert-triangle' : 'lucide:minus',
       previous: prevCreatinine
         ? `Прошлый визит: ${prevCreatinine} мкмоль/л`
-        : 'Нет данных',
+        : creatStatus?.interpretation || 'Нет данных',
+      critical: creatStatus?.variant === 'destructive',
     },
     {
       label: 'АЛТ / АСТ',
@@ -244,6 +274,7 @@ export function mapVisitToUi(visit, previousVisit, index) {
     conclusion:
       visit.conclusion ||
       'Визит зарегистрирован. Требуется контроль динамики показателей.',
+    prescribedMeds: buildPrescribedMeds(visit.medications),
   }
 }
 
@@ -343,6 +374,7 @@ export function mapVisitInsert(patientId, form, staff) {
     alt: form.alt !== '' ? Number(form.alt) : null,
     ast: form.ast !== '' ? Number(form.ast) : null,
     ast_alt_ratio: altAst ? Number(altAst.value) : null,
+    medications: form.medications || null,
     risk_group: efRisk?.stage || 'A',
     conclusion:
       form.conclusion?.trim() ||
